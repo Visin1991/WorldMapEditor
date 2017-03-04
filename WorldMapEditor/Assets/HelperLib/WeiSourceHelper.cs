@@ -22,7 +22,7 @@ namespace Wei.Source
             //1 .Open File stream and Writer
             FileStream stream = new FileStream(path + textureName + ".png", FileMode.OpenOrCreate, FileAccess.Write);
             BinaryWriter writer = new BinaryWriter(stream);
-
+            Debug.Log("Writting a File");
             //3. Write
             for (int i = 0; i < bytes.Length; i++)
             {
@@ -32,6 +32,7 @@ namespace Wei.Source
             //3.Close
             writer.Close();
             stream.Close();
+            Debug.Log("Fnished");
         }
     }
 }

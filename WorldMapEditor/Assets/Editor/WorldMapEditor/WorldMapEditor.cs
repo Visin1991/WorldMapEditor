@@ -73,6 +73,7 @@ namespace sonil.Editors {
 		public void OnGUI()
 		{
 			DrawGUI (position.width,position.height);       //position Build in variable :  the actural window width and height
+            GetMousePosition();
         }
 
 		private void DrawGrid()
@@ -114,11 +115,11 @@ namespace sonil.Editors {
 			}
             
 			Vector2 curScroll= GUI.BeginScrollView (MapCanvasSize, WorldMapScrollPosition,scrollView,true,true); //MapCanvasSize: the MapView window size. scrollView : the background texture size or MaxCanvasSize
-           
-            if (bmd.background != null) {
-				GUI.DrawTexture (scrollView, bmd.background);
-				GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
-			}
+
+           if (bmd.background != null) {
+                 GUI.DrawTexture (scrollView, bmd.background);
+                 GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
+             }
 
 			UpdateScrollPosition (curScroll);
 
@@ -149,16 +150,17 @@ namespace sonil.Editors {
         static Texture2D noiseTexture;
 
         bool showNoiseSetting = false;
-        static int powerW = 8;
-        static int textureWidth = 256;
-        static int powerH = 8;
-        static int textureHeight = 256;
+        static int powerW = 10;
+        static int textureWidth = 1024;
+        static int powerH = 10;
+        static int textureHeight = 1024;
         static int noiseSeed = 0;
         static float noiseScale = 1;
         static int noiseOctaves = 3;
         static float noisePersistance = 0.5f;
         static float noiseLacunarity = 2.0f;
         static Vector2 noiseOffset = Vector2.zero;
+
         Wei.Random.NoiseGenerator.NormalizedMode noiseModel = Wei.Random.NoiseGenerator.NormalizedMode.Local;
 
         void ProceduralTexture()
@@ -176,7 +178,9 @@ namespace sonil.Editors {
                 noisePersistance = EditorGUILayout.Slider("Persistance", noisePersistance, 0.1f, 0.5f);
                 noiseLacunarity = EditorGUILayout.Slider("Lacunarity", noiseLacunarity, 1.0f, 10.0f);
                 noiseOffset = EditorGUILayout.Vector2Field("Offset", noiseOffset);
+
                 //noiseModel = EditorGUILayout.EnumPopup(noiseModel, Wei.Random.NoiseGenerator.NormalizedMode)
+
                 if (EditorGUI.EndChangeCheck())
                 {
                     textureWidth = 1 << powerW;
@@ -191,7 +195,7 @@ namespace sonil.Editors {
 
                 if (GUILayout.Button("Save Texture"))
                 {
-                    Wei.Source.SourceHelper.SaveTexture(bmd.background, "noiseTest");
+                    Wei.Source.SourceHelper.SaveTexture(noiseTexture, "noiseTest");
                 }
             }
         }
@@ -202,6 +206,44 @@ namespace sonil.Editors {
             noiseTexture = Wei.Generator.TextureGenerator.TextureFromHeightMap(noiseMap);
             bmd.background = noiseTexture;
         }
+
+        void GetMousePosition()
+        {
+            var eventType = Event.current.type;
+
+            if (eventType == EventType.MouseDown)
+            {
+                Vector2 mouseMapCanvasPos = Event.current.mousePosition;
+                mouseMapCanvasPos.x = Mathf.Clamp(mouseMapCanvasPos.x, 0, MapCanvasSize.width);
+                mouseMapCanvasPos.y = Mathf.Clamp(mouseMapCanvasPos.y, 0, MapCanvasSize.height);
+
+                if (noiseTexture == null)
+                {
+                    noiseTexture = bmd.background;
+                }
+                else {
+                    Debug.Log("Set");
+                    int brushSize = 20;
+                    int centerX = (int)mouseMapCanvasPos.x;
+                    int centerY = (int)mouseMapCanvasPos.y;
+                    centerY = textureHeight - centerY;
+                    for (int y = -brushSize / 2; y < brushSize / 2; y++)
+                    {
+                        if( centerY + y < 0 || centerY + y >= MapCanvasSize.height) { continue; }
+                        for (int x = -brushSize / 2; x < brushSize / 2; x++)
+                        {
+                            if (centerX + x < 0 || centerX + x >= MapCanvasSize.width) { continue; }
+                            if (x * x + y * y <= brushSize * brushSize * 0.25f)
+                                noiseTexture.SetPixel(centerX+x, centerY+y,Color.red);       
+                        }
+                    }
+                    noiseTexture.Apply();
+                }
+            }
+        }
+
+        //OnInspectorUpdate is called at 10 frames per second to give the inspector a chance to update.
+        //private void OnInspectorUpdate(){}
 
         #endregion
     }
