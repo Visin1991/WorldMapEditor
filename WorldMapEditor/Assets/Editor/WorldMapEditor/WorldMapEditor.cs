@@ -129,7 +129,8 @@ namespace sonil.Editors {
 
             GLDrawCircle();
 
-            mousePosition = currentEvent.mousePosition;
+            //mousePosition = currentEvent.mousePosition;
+
 			GUI.EndScrollView ();
 
 			GUI.BeginGroup(InsCanvasSize);
@@ -253,6 +254,8 @@ namespace sonil.Editors {
             }
         }
 
+        static int staticDebugStack = 0;
+
         void GLDrawCircle()
         {
             if (!showNoiseSetting) { return; }
@@ -260,19 +263,26 @@ namespace sonil.Editors {
             Vector2 center = Event.current.mousePosition;
             if (!MapCanvasSize.Contains(center)) { return; }
 
-            float radius = brushSize / 2.0f;
+            
 
-            float setp = 360 / 20.0f;
+            float radius = brushSize / 2.0f;
+            int subDivision = 20;
+            float setp = 360 / (float)subDivision;
             GL.PushMatrix();
             GL.Begin(GL.LINES);
             GL.Color(new Color(1, 0, 0, 1));
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i <= subDivision; i++)
              {
-                 Vector2 p1 = new Vector2(radius * (float)Math.Cos(setp * i), radius * (float)Math.Sin(setp * i));
-                 Vector2 p2 = new Vector2(radius * (float)Math.Cos(setp * (i + 1)), radius * (float)Math.Sin(setp * (i + 1)));
+                float x = radius * Mathf.Cos(Mathf.Deg2Rad * setp * i);
+                float y = radius * Mathf.Sin(Mathf.Deg2Rad * setp * i);
+                 Vector2 p1 = new Vector2(x,y);
                  GL.Vertex(center + p1);
-                 GL.Vertex(center + p2);
-             }
+
+                float x2 = radius * Mathf.Cos(Mathf.Deg2Rad * setp * (i+1));
+                float y2 = radius * Mathf.Sin(Mathf.Deg2Rad * setp * (i+1));
+                Vector2 p2 = new Vector2(x2, y2);
+                GL.Vertex(center + p2);
+            }
             GL.End();
             GL.PopMatrix();
             Repaint();
