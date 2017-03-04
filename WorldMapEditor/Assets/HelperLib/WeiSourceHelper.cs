@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using UnityEngine;
+using UnityEditor;
 
 namespace Wei.Source
 {
@@ -32,7 +33,8 @@ namespace Wei.Source
             //3.Close
             writer.Close();
             stream.Close();
-            Debug.Log("Fnished");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
         }
     }
 }

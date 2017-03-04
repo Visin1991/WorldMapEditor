@@ -115,7 +115,6 @@ namespace sonil.Editors {
 			}
             
 			Vector2 curScroll= GUI.BeginScrollView (MapCanvasSize, WorldMapScrollPosition,scrollView,true,true); //MapCanvasSize: the MapView window size. scrollView : the background texture size or MaxCanvasSize
-
            if (bmd.background != null) {
                  GUI.DrawTexture (scrollView, bmd.background);
                  GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
@@ -214,31 +213,35 @@ namespace sonil.Editors {
             if (eventType == EventType.MouseDown)
             {
                 Vector2 mouseMapCanvasPos = Event.current.mousePosition;
-                mouseMapCanvasPos.x = Mathf.Clamp(mouseMapCanvasPos.x, 0, MapCanvasSize.width);
-                mouseMapCanvasPos.y = Mathf.Clamp(mouseMapCanvasPos.y, 0, MapCanvasSize.height);
+
+                if (!MapCanvasSize.Contains(mouseMapCanvasPos)) { return; }
 
                 if (noiseTexture == null)
                 {
                     noiseTexture = bmd.background;
                 }
                 else {
-                    Debug.Log("Set");
+
                     int brushSize = 20;
                     int centerX = (int)mouseMapCanvasPos.x;
                     int centerY = (int)mouseMapCanvasPos.y;
+                    centerX = centerX + (int)WorldMapScrollPosition.x;
+                    centerY = centerY + (int)WorldMapScrollPosition.y;
                     centerY = textureHeight - centerY;
+
                     for (int y = -brushSize / 2; y < brushSize / 2; y++)
                     {
-                        if( centerY + y < 0 || centerY + y >= MapCanvasSize.height) { continue; }
+                        if( centerY + y < 0 || centerY + y >= textureHeight) { continue; }
                         for (int x = -brushSize / 2; x < brushSize / 2; x++)
                         {
-                            if (centerX + x < 0 || centerX + x >= MapCanvasSize.width) { continue; }
+                            if (centerX + x < 0 || centerX + x >= textureWidth) { continue; }
                             if (x * x + y * y <= brushSize * brushSize * 0.25f)
                                 noiseTexture.SetPixel(centerX+x, centerY+y,Color.red);       
                         }
                     }
                     noiseTexture.Apply();
                 }
+                Repaint();
             }
         }
 
