@@ -1,11 +1,9 @@
 ﻿using UnityEngine;
-using System.Linq;
-using System.Collections;
-using System.Collections.Generic;
+using System.IO;
 
 namespace sonil.rpgkit {
 	[System.Serializable]
 	public class WorldMapData : ScriptableObject {
-		public Texture background;
+		public Texture2D background;
 	}
 }

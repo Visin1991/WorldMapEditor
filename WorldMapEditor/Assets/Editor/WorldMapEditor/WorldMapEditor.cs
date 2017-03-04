@@ -17,9 +17,9 @@ namespace sonil.Editors {
 		{
 			if (WorldMapEditor.instance != null) 
 			{
-				WorldMapEditor.instance.Show ();
-				WorldMapEditor.instance.init (data);
-				return WorldMapEditor.instance;
+				WorldMapEditor.instance.Show ();          //Build in function: Show the EditorWindow.
+                WorldMapEditor.instance.init (data);      //reset the scrollView, and assign WorldMapData
+                return WorldMapEditor.instance;
 			}
 				
 			WorldMapEditor.instance = EditorWindow.GetWindow<WorldMapEditor>("WorldMapEditor");
@@ -72,13 +72,13 @@ namespace sonil.Editors {
 
 		public void OnGUI()
 		{
-			DrawGUI (position.width,position.height);
-		}
+			DrawGUI (position.width,position.height);       //position Build in variable :  the actural window width and height
+        }
 
 		private void DrawGrid()
 		{
 			GL.PushMatrix();
-			GL.Begin(1);
+			GL.Begin(GL.LINES);
 			DrawGridLines(scrollView,WorldMapEditor.GridMajorSize,Vector2.zero, NodeStyles.gridMajorColor);
 			GL.End();
 			GL.PopMatrix();
@@ -99,26 +99,27 @@ namespace sonil.Editors {
 
 		private void DrawLine(Vector2 p1, Vector2 p2)
 		{
-			GL.Vertex(p1);
+			GL.Vertex(p1);  //Called between GL.Begin and GL.End
 			GL.Vertex(p2);
 		}
 
 		public void DrawGUI(float width,float height) 
 		{
 			currentEvent = Event.current;
-			MapCanvasSize= GetMapCanvasSize(width,height);
-			InsCanvasSize= GetInsCanvasSize(width,height);
+			MapCanvasSize= GetMapCanvasSize(width,height); //Get the MapView window size
+			InsCanvasSize= GetInsCanvasSize(width,height); //Get the right helper window size
 
 			if (currentEvent.type == EventType.Repaint) {
 				WorldMapEditor.canvasBackground.Draw(MapCanvasSize, false, false, false, false);
 			}
-
-			Vector2 curScroll= GUI.BeginScrollView (MapCanvasSize, WorldMapScrollPosition,scrollView,true,true);
-
-			if (bmd.background != null) {
+            
+			Vector2 curScroll= GUI.BeginScrollView (MapCanvasSize, WorldMapScrollPosition,scrollView,true,true); //MapCanvasSize: the MapView window size. scrollView : the background texture size or MaxCanvasSize
+           
+            if (bmd.background != null) {
 				GUI.DrawTexture (scrollView, bmd.background);
-				GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true);
+				GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
 			}
+
 			UpdateScrollPosition (curScroll);
 
 			if (currentEvent.type == EventType.Repaint) {
@@ -128,11 +129,12 @@ namespace sonil.Editors {
 			mousePosition = currentEvent.mousePosition;
 			GUI.EndScrollView ();
 
-			GUI.BeginGroup (InsCanvasSize);
+			GUI.BeginGroup(InsCanvasSize);
 			EditorGUILayout.BeginScrollView (InsScrollPosition,GUILayout.MaxWidth(300));
 			mode = (MapEditorMode)EditorGUILayout.EnumPopup ("MapEditorMode",mode);
 			EditorGUILayout.TextField ("asd", "asd");
 			EditorGUILayout.TextField ("asd", "asd");
+            ProceduralTexture();
 			EditorGUILayout.EndScrollView ();
 			GUI.EndGroup ();
 		}
@@ -141,9 +143,70 @@ namespace sonil.Editors {
 		{
 			AssetDatabase.SaveAssets ();
 		}
-	}
 
-	public enum MapEditorMode
+        #region Wei
+        static float[,] noiseMap;
+        static Texture2D noiseTexture;
+
+        bool showNoiseSetting = false;
+        static int powerW = 8;
+        static int textureWidth = 256;
+        static int powerH = 8;
+        static int textureHeight = 256;
+        static int noiseSeed = 0;
+        static float noiseScale = 1;
+        static int noiseOctaves = 3;
+        static float noisePersistance = 0.5f;
+        static float noiseLacunarity = 2.0f;
+        static Vector2 noiseOffset = Vector2.zero;
+        Wei.Random.NoiseGenerator.NormalizedMode noiseModel = Wei.Random.NoiseGenerator.NormalizedMode.Local;
+
+        void ProceduralTexture()
+        {
+            showNoiseSetting = EditorGUILayout.Foldout(showNoiseSetting, "NoiseMap");
+
+            if (showNoiseSetting)
+            {
+                EditorGUI.BeginChangeCheck();
+                powerW = EditorGUILayout.IntSlider("Width: "+textureWidth.ToString(),powerW, 1, 10);
+                powerH = EditorGUILayout.IntSlider("Height: "+textureHeight.ToString(), powerH, 1, 10);
+                noiseSeed = EditorGUILayout.IntSlider("Seed", noiseSeed, 0, 100);
+                noiseScale = EditorGUILayout.Slider("Scale", noiseScale, 0.1f, 100.0f);
+                noiseOctaves = EditorGUILayout.IntSlider("Octaves", noiseOctaves, 1, 5);
+                noisePersistance = EditorGUILayout.Slider("Persistance", noisePersistance, 0.1f, 0.5f);
+                noiseLacunarity = EditorGUILayout.Slider("Lacunarity", noiseLacunarity, 1.0f, 10.0f);
+                noiseOffset = EditorGUILayout.Vector2Field("Offset", noiseOffset);
+                //noiseModel = EditorGUILayout.EnumPopup(noiseModel, Wei.Random.NoiseGenerator.NormalizedMode)
+                if (EditorGUI.EndChangeCheck())
+                {
+                    textureWidth = 1 << powerW;
+                    textureHeight = 1 << powerH;
+                    ReSetNoiseMap();
+                }
+
+                if (GUILayout.Button("Generator Noise Map"))
+                {
+                    ReSetNoiseMap();
+                }
+
+                if (GUILayout.Button("Save Texture"))
+                {
+                    Wei.Source.SourceHelper.SaveTexture(bmd.background, "noiseTest");
+                }
+            }
+        }
+
+        void ReSetNoiseMap()
+        {
+            noiseMap = Wei.Random.NoiseGenerator.GenerateNoiseMap(textureWidth, textureHeight, noiseSeed, noiseScale, noiseOctaves, noisePersistance, noiseLacunarity, noiseOffset, Wei.Random.NoiseGenerator.NormalizedMode.Local);
+            noiseTexture = Wei.Generator.TextureGenerator.TextureFromHeightMap(noiseMap);
+            bmd.background = noiseTexture;
+        }
+
+        #endregion
+    }
+
+    public enum MapEditorMode
 	{
 		location,
 		yewai,
