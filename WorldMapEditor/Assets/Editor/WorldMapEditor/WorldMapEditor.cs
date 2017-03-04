@@ -82,8 +82,8 @@ namespace sonil.Editors {
 			GL.Begin(GL.LINES);
 			DrawGridLines(scrollView,WorldMapEditor.GridMajorSize,Vector2.zero, NodeStyles.gridMajorColor);
 			GL.End();
-			GL.PopMatrix();
-		}
+            GL.PopMatrix();   
+        }
 
 		private void DrawGridLines(Rect rect,float gridSize,Vector2 offset, Color gridColor)
 		{
@@ -119,14 +119,17 @@ namespace sonil.Editors {
                  GUI.DrawTexture (scrollView, bmd.background);
                  GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
              }
+            if (bmd.pathFindingMask != null) { GUI.DrawTexture(scrollView, bmd.pathFindingMask); }
 
 			UpdateScrollPosition (curScroll);
 
 			if (currentEvent.type == EventType.Repaint) {
 				DrawGrid ();
-			}
+            }
 
-			mousePosition = currentEvent.mousePosition;
+            GLDrawCircle();
+
+            mousePosition = currentEvent.mousePosition;
 			GUI.EndScrollView ();
 
 			GUI.BeginGroup(InsCanvasSize);
@@ -159,9 +162,10 @@ namespace sonil.Editors {
         static float noisePersistance = 0.5f;
         static float noiseLacunarity = 2.0f;
         static Vector2 noiseOffset = Vector2.zero;
-
         Wei.Random.NoiseGenerator.NormalizedMode noiseModel = Wei.Random.NoiseGenerator.NormalizedMode.Local;
 
+        static Color brushColor = Color.black;
+        static int brushSize = 20;
         void ProceduralTexture()
         {
             showNoiseSetting = EditorGUILayout.Foldout(showNoiseSetting, "NoiseMap");
@@ -177,9 +181,7 @@ namespace sonil.Editors {
                 noisePersistance = EditorGUILayout.Slider("Persistance", noisePersistance, 0.1f, 0.5f);
                 noiseLacunarity = EditorGUILayout.Slider("Lacunarity", noiseLacunarity, 1.0f, 10.0f);
                 noiseOffset = EditorGUILayout.Vector2Field("Offset", noiseOffset);
-
                 //noiseModel = EditorGUILayout.EnumPopup(noiseModel, Wei.Random.NoiseGenerator.NormalizedMode)
-
                 if (EditorGUI.EndChangeCheck())
                 {
                     textureWidth = 1 << powerW;
@@ -187,6 +189,8 @@ namespace sonil.Editors {
                     ReSetNoiseMap();
                 }
 
+                brushColor = EditorGUILayout.ColorField("BrushColor", brushColor);
+                brushSize = EditorGUILayout.IntSlider("Brush Size", brushSize, 2, 100);
                 if (GUILayout.Button("Generator Noise Map"))
                 {
                     ReSetNoiseMap();
@@ -202,32 +206,34 @@ namespace sonil.Editors {
         void ReSetNoiseMap()
         {
             noiseMap = Wei.Random.NoiseGenerator.GenerateNoiseMap(textureWidth, textureHeight, noiseSeed, noiseScale, noiseOctaves, noisePersistance, noiseLacunarity, noiseOffset, Wei.Random.NoiseGenerator.NormalizedMode.Local);
-            noiseTexture = Wei.Generator.TextureGenerator.TextureFromHeightMap(noiseMap);
-            bmd.background = noiseTexture;
+            noiseTexture = Wei.Generator.TextureGenerator.TextureFromHeightMap(noiseMap,0.5f);
+            bmd.pathFindingMask = noiseTexture;
         }
 
         void GetMousePosition()
         {
+            if (!showNoiseSetting) { return; }
+
             var eventType = Event.current.type;
 
-            if (eventType == EventType.MouseDown)
+            Vector2 mouseMapCanvasPos = Event.current.mousePosition;
+
+            if (!MapCanvasSize.Contains(mouseMapCanvasPos)) { return; }
+
+            if (eventType == EventType.MouseDown || eventType == EventType.MouseDrag)
             {
-                Vector2 mouseMapCanvasPos = Event.current.mousePosition;
-
-                if (!MapCanvasSize.Contains(mouseMapCanvasPos)) { return; }
-
                 if (noiseTexture == null)
                 {
-                    noiseTexture = bmd.background;
+                    noiseTexture = bmd.pathFindingMask;
                 }
                 else {
 
-                    int brushSize = 20;
                     int centerX = (int)mouseMapCanvasPos.x;
                     int centerY = (int)mouseMapCanvasPos.y;
                     centerX = centerX + (int)WorldMapScrollPosition.x;
                     centerY = centerY + (int)WorldMapScrollPosition.y;
                     centerY = textureHeight - centerY;
+
 
                     for (int y = -brushSize / 2; y < brushSize / 2; y++)
                     {
@@ -236,13 +242,40 @@ namespace sonil.Editors {
                         {
                             if (centerX + x < 0 || centerX + x >= textureWidth) { continue; }
                             if (x * x + y * y <= brushSize * brushSize * 0.25f)
-                                noiseTexture.SetPixel(centerX+x, centerY+y,Color.red);       
+                            {
+                                noiseTexture.SetPixel(centerX + x, centerY + y, brushColor);
+                            }      
                         }
                     }
                     noiseTexture.Apply();
                 }
                 Repaint();
             }
+        }
+
+        void GLDrawCircle()
+        {
+            if (!showNoiseSetting) { return; }
+            var eventType = Event.current.type;
+            Vector2 center = Event.current.mousePosition;
+            if (!MapCanvasSize.Contains(center)) { return; }
+
+            float radius = brushSize / 2.0f;
+
+            float setp = 360 / 20.0f;
+            GL.PushMatrix();
+            GL.Begin(GL.LINES);
+            GL.Color(new Color(1, 0, 0, 1));
+            for (int i = 0; i < 20; i++)
+             {
+                 Vector2 p1 = new Vector2(radius * (float)Math.Cos(setp * i), radius * (float)Math.Sin(setp * i));
+                 Vector2 p2 = new Vector2(radius * (float)Math.Cos(setp * (i + 1)), radius * (float)Math.Sin(setp * (i + 1)));
+                 GL.Vertex(center + p1);
+                 GL.Vertex(center + p2);
+             }
+            GL.End();
+            GL.PopMatrix();
+            Repaint();
         }
 
         //OnInspectorUpdate is called at 10 frames per second to give the inspector a chance to update.
