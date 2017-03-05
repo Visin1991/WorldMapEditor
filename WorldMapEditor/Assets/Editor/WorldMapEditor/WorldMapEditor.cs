@@ -2,11 +2,14 @@
 using UnityEditor;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using sonil.rpgkit;
 
 namespace sonil.Editors {
 	public class WorldMapEditor : EditorWindow {
-		private WorldMapData bmd;
+
+        #region Main
+        private WorldMapData bmd;
 
 		public static WorldMapEditor instance;
 		public static Vector2 minsize = new Vector2(900,600);
@@ -135,7 +138,7 @@ namespace sonil.Editors {
 			GUI.EndScrollView ();
 
 			GUI.BeginGroup(InsCanvasSize);
-			EditorGUILayout.BeginScrollView (InsScrollPosition,GUILayout.MaxWidth(300));
+			EditorGUILayout.BeginScrollView(InsScrollPosition,GUILayout.MaxWidth(300));
             QuickToolBar();
             DetailInspectCanvas();    
 			EditorGUILayout.EndScrollView ();
@@ -146,6 +149,7 @@ namespace sonil.Editors {
 		{
 			AssetDatabase.SaveAssets ();
 		}
+        #endregion
 
         #region Wei
         static float[,] noiseMap;
@@ -163,6 +167,7 @@ namespace sonil.Editors {
         static float noiseLacunarity = 2.0f;
         static Vector2 noiseOffset = Vector2.zero;
         Wei.Random.NoiseGenerator.NormalizedMode noiseModel = Wei.Random.NoiseGenerator.NormalizedMode.Local;
+        static int selectedToolIndex = -1;
 
         static Color brushColor = Color.black;
         static int brushSize = 20;
@@ -304,28 +309,73 @@ namespace sonil.Editors {
 
         void QuickToolBar()
         {
-            
             quickToolCanvas = GetQuickToolCanvasSize(InsCanvasSize.width, InsCanvasSize.height);
-            GUI.BeginGroup(quickToolCanvas);
-            //........
-            GUI.EndGroup();
+            GUILayout.BeginArea(quickToolCanvas);
+            selectedToolIndex = GUILayout.SelectionGrid(selectedToolIndex, GetToolBarGUIContent(), 1, GetToolBarGUIStyle());
+            GUILayout.EndArea();
         }
-
         void DetailInspectCanvas()
         {
             detailInpsectCanvas = GetDetailInspectCanvasSize(InsCanvasSize.width, InsCanvasSize.height);
-            GUI.BeginGroup(detailInpsectCanvas);
-            EditorGUILayout.BeginScrollView(InsScrollPosition, GUILayout.MaxWidth(250));
+            GUILayout.BeginArea(detailInpsectCanvas);
             mode = (MapEditorMode)EditorGUILayout.EnumPopup("MapEditorMode", mode);
             EditorGUILayout.TextField("asd", "asd");
             EditorGUILayout.TextField("asd", "asd");
             ProceduralTexture();
-            EditorGUILayout.EndScrollView();
-            GUI.EndGroup();
+            GUILayout.EndArea();
         }
         //OnInspectorUpdate is called at 10 frames per second to give the inspector a chance to update.
         //private void OnInspectorUpdate(){}
+        private string _IcoPpath = "Assets/Editor/Resources";
+        private List<EditorToolBarIcon> toolBarObjs;
+        private Dictionary<EditorToolBarIcon, Texture2D> toolBarPreviews;
 
+        private void OnEnable()
+        {
+            if (toolBarObjs == null)
+            {
+                InitToolBarTypes();
+            }
+        }
+        private void InitToolBarTypes()
+        {
+            toolBarObjs = Wei.Source.SourceHelper.GetAssetsWithScript<EditorToolBarIcon>(_IcoPpath);
+            if(toolBarPreviews == null) { toolBarPreviews = new Dictionary<EditorToolBarIcon, Texture2D>(); }
+            foreach (EditorToolBarIcon obj in toolBarObjs)
+            {
+                if (!toolBarPreviews.ContainsKey(obj))
+                {
+                    Texture2D preview = AssetPreview.GetAssetPreview(obj.gameObject);
+                    if (preview != null)
+                    {
+                        toolBarPreviews.Add(obj, preview);
+                    }
+                }
+            }
+        }
+        private GUIContent[] GetToolBarGUIContent()
+        {
+            int totalType = toolBarObjs.Count;
+            List<GUIContent> guiContents = new List<GUIContent>();
+            for (int i = 0; i < totalType; i++)
+            {
+                GUIContent guiContent = new GUIContent();
+                guiContent.text = toolBarObjs[i].itemName;
+                guiContent.image = toolBarPreviews[toolBarObjs[i]];
+                guiContents.Add(guiContent);
+            }
+            return guiContents.ToArray();
+        }
+        private GUIStyle GetToolBarGUIStyle()
+        {
+            GUIStyle guiStyle = new GUIStyle(GUI.skin.button);
+            //guiStyle.alignment = TextAnchor.LowerCenter;
+            guiStyle.imagePosition = ImagePosition.ImageOnly;
+            guiStyle.fixedHeight = 45.0f;
+            guiStyle.fixedWidth = 45.0f;
+            return guiStyle;
+        }
+        
         #endregion
     }
 
@@ -334,4 +384,5 @@ namespace sonil.Editors {
 		location,
 		yewai,
 	}
+
 }
