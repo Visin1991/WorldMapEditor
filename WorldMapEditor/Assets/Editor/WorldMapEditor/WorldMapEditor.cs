@@ -30,7 +30,8 @@ namespace sonil.Editors {
 
 		protected Rect MapCanvasSize;
 		protected Rect InsCanvasSize;
-		MapEditorMode mode = MapEditorMode.location;
+
+        MapEditorMode mode = MapEditorMode.location;
 		protected Vector2 mousePosition;
 		protected Event currentEvent;
 		protected Vector2 WorldMapScrollPosition;
@@ -68,12 +69,12 @@ namespace sonil.Editors {
 		protected Rect GetInsCanvasSize(float width,float height)
 		{
 			return new Rect (width - 300, 0, 300, height);
-		}
+		}     
 
 		public void OnGUI()
 		{
 			DrawGUI (position.width,position.height);       //position Build in variable :  the actural window width and height
-            GetMousePosition();
+            Brush();
         }
 
 		private void DrawGrid()
@@ -127,18 +128,15 @@ namespace sonil.Editors {
 				DrawGrid ();
             }
 
-            GLDrawCircle();
+            GLDrawBrushCircle(); //Draw the BrushCircle before the InsCanvasSize
 
             //mousePosition = currentEvent.mousePosition;
-
 			GUI.EndScrollView ();
 
 			GUI.BeginGroup(InsCanvasSize);
 			EditorGUILayout.BeginScrollView (InsScrollPosition,GUILayout.MaxWidth(300));
-			mode = (MapEditorMode)EditorGUILayout.EnumPopup ("MapEditorMode",mode);
-			EditorGUILayout.TextField ("asd", "asd");
-			EditorGUILayout.TextField ("asd", "asd");
-            ProceduralTexture();
+            QuickToolBar();
+            DetailInspectCanvas();    
 			EditorGUILayout.EndScrollView ();
 			GUI.EndGroup ();
 		}
@@ -167,10 +165,13 @@ namespace sonil.Editors {
 
         static Color brushColor = Color.black;
         static int brushSize = 20;
+
+        static bool isBrush = true;
+        
         void ProceduralTexture()
         {
+            
             showNoiseSetting = EditorGUILayout.Foldout(showNoiseSetting, "NoiseMap");
-
             if (showNoiseSetting)
             {
                 EditorGUI.BeginChangeCheck();
@@ -192,15 +193,16 @@ namespace sonil.Editors {
 
                 brushColor = EditorGUILayout.ColorField("BrushColor", brushColor);
                 brushSize = EditorGUILayout.IntSlider("Brush Size", brushSize, 2, 100);
-                if (GUILayout.Button("Generator Noise Map"))
-                {
-                    ReSetNoiseMap();
-                }
+            }
 
-                if (GUILayout.Button("Save Texture"))
-                {
-                    Wei.Source.SourceHelper.SaveTexture(noiseTexture, "noiseTest");
-                }
+            if (GUILayout.Button("Generator Noise Map"))
+            {
+                ReSetNoiseMap();
+            }
+
+            if (GUILayout.Button("Save Texture"))
+            {
+                Wei.Source.SourceHelper.SaveTexture(noiseTexture, "noiseTest");
             }
         }
 
@@ -211,7 +213,7 @@ namespace sonil.Editors {
             bmd.pathFindingMask = noiseTexture;
         }
 
-        void GetMousePosition()
+        void Brush()
         {
             if (!showNoiseSetting) { return; }
 
@@ -225,6 +227,7 @@ namespace sonil.Editors {
             {
                 if (noiseTexture == null)
                 {
+                    if (bmd.pathFindingMask == null) { ReSetNoiseMap(); return; }
                     noiseTexture = bmd.pathFindingMask;
                 }
                 else {
@@ -254,16 +257,12 @@ namespace sonil.Editors {
             }
         }
 
-        static int staticDebugStack = 0;
-
-        void GLDrawCircle()
+        void GLDrawBrushCircle()
         {
             if (!showNoiseSetting) { return; }
             var eventType = Event.current.type;
             Vector2 center = Event.current.mousePosition;
             if (!MapCanvasSize.Contains(center)) { return; }
-
-            
 
             float radius = brushSize / 2.0f;
             int subDivision = 20;
@@ -288,6 +287,39 @@ namespace sonil.Editors {
             Repaint();
         }
 
+        protected Rect quickToolCanvas;
+
+        protected Rect detailInpsectCanvas;
+
+        protected Rect GetQuickToolCanvasSize(float width,float height)
+        {
+            return new Rect(0, 0, 50, height);
+        }
+
+        protected Rect GetDetailInspectCanvasSize(float width,float height)
+        {
+            return new Rect(50, 0, 250, height);
+        }
+
+        void QuickToolBar()
+        {
+            
+            quickToolCanvas = GetQuickToolCanvasSize(InsCanvasSize.width, InsCanvasSize.height);
+            GUI.BeginGroup(quickToolCanvas);
+            //........
+            GUI.EndGroup();
+        }
+
+        void DetailInspectCanvas()
+        {
+            detailInpsectCanvas = GetDetailInspectCanvasSize(InsCanvasSize.width, InsCanvasSize.height);
+            GUI.BeginGroup(detailInpsectCanvas);
+            mode = (MapEditorMode)EditorGUILayout.EnumPopup("MapEditorMode", mode);
+            EditorGUILayout.TextField("asd", "asd");
+            EditorGUILayout.TextField("asd", "asd");
+            ProceduralTexture();
+            GUI.EndGroup();
+        }
         //OnInspectorUpdate is called at 10 frames per second to give the inspector a chance to update.
         //private void OnInspectorUpdate(){}
 
