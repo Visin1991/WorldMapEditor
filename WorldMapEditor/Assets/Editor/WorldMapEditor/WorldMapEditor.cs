@@ -120,6 +120,7 @@ namespace sonil.Editors {
                  GUI.DrawTexture (scrollView, bmd.background);
                  GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
              }
+
             if (bmd.pathFindingMask != null) { GUI.DrawTexture(scrollView, bmd.pathFindingMask); }
 
 			UpdateScrollPosition (curScroll);
@@ -314,10 +315,12 @@ namespace sonil.Editors {
         {
             detailInpsectCanvas = GetDetailInspectCanvasSize(InsCanvasSize.width, InsCanvasSize.height);
             GUI.BeginGroup(detailInpsectCanvas);
+            EditorGUILayout.BeginScrollView(InsScrollPosition, GUILayout.MaxWidth(250));
             mode = (MapEditorMode)EditorGUILayout.EnumPopup("MapEditorMode", mode);
             EditorGUILayout.TextField("asd", "asd");
             EditorGUILayout.TextField("asd", "asd");
             ProceduralTexture();
+            EditorGUILayout.EndScrollView();
             GUI.EndGroup();
         }
         //OnInspectorUpdate is called at 10 frames per second to give the inspector a chance to update.
