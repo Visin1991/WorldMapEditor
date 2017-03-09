@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class EditorToolBarIcon : MonoBehaviour {
+#if UNITY_EDITOR
     public enum BarType
     {
         Brush,
@@ -10,5 +11,6 @@ public class EditorToolBarIcon : MonoBehaviour {
         Line,
     }
     public BarType type = BarType.Brush;
-    public string itemName = "";
+    public Texture2D preview;
+#endif
 }

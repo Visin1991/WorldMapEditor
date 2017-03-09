@@ -72,5 +72,10 @@ namespace Wei.Source
 #endif
             return assetList;
         }
+
+        public static Texture2D TextureFromEditorToolBarIcon(EditorToolBarIcon obj)
+        {
+            return obj.preview;
+        }
     }
 }

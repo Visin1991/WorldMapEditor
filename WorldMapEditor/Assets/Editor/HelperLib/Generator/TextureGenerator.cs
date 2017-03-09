@@ -9,7 +9,7 @@ namespace Wei.Generator
             Texture2D texture = new Texture2D(width, height);
             texture.filterMode = FilterMode.Point;
             texture.wrapMode = TextureWrapMode.Clamp;
-
+            texture.alphaIsTransparency = true;
             texture.SetPixels(colorMap);
             texture.Apply();
             return texture;

@@ -53,7 +53,7 @@ namespace sonil.Editors {
 			} else {
 				this.scrollView = new Rect (0, 0, bmd.background.width, bmd.background.height);
 			}
-		}
+        }
 
 		protected void UpdateScrollPosition(Vector2 position)
 		{
@@ -119,21 +119,22 @@ namespace sonil.Editors {
 			}
             
 			Vector2 curScroll= GUI.BeginScrollView (MapCanvasSize, WorldMapScrollPosition,scrollView,true,true); //MapCanvasSize: the MapView window size. scrollView : the background texture size or MaxCanvasSize
-           if (bmd.background != null) {
-                 GUI.DrawTexture (scrollView, bmd.background);
-                 GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
+            
+            if(bmd == null) { Debug.LogError("Bmd is null");return; }
+
+            if (bmd.background != null) {
+               GUI.DrawTexture (scrollView, bmd.background);
+               GUI.DrawTexture (new Rect (60, 60, 60, 60), bmd.background, ScaleMode.StretchToFill, true); // what's this line used for?
              }
 
             if (bmd.pathFindingMask != null) { GUI.DrawTexture(scrollView, bmd.pathFindingMask); }
 
 			UpdateScrollPosition (curScroll);
-
+     
 			if (currentEvent.type == EventType.Repaint) {
 				DrawGrid ();
             }
-
             GLDrawBrushCircle(); //Draw the BrushCircle before the InsCanvasSize
-
             //mousePosition = currentEvent.mousePosition;
 			GUI.EndScrollView ();
 
@@ -167,7 +168,7 @@ namespace sonil.Editors {
         static float noiseLacunarity = 2.0f;
         static Vector2 noiseOffset = Vector2.zero;
         Wei.Random.NoiseGenerator.NormalizedMode noiseModel = Wei.Random.NoiseGenerator.NormalizedMode.Local;
-        static int selectedToolIndex = -1;
+        static int selectedToolIndex = 0;
 
         static Color brushColor = Color.black;
         static int brushSize = 20;
@@ -311,9 +312,21 @@ namespace sonil.Editors {
         {
             quickToolCanvas = GetQuickToolCanvasSize(InsCanvasSize.width, InsCanvasSize.height);
             GUILayout.BeginArea(quickToolCanvas);
+            EditorGUI.BeginChangeCheck();
+            
             selectedToolIndex = GUILayout.SelectionGrid(selectedToolIndex, GetToolBarGUIContent(), 1, GetToolBarGUIStyle());
+            
+            if (EditorGUI.EndChangeCheck())
+            {
+                if (toolBarTyes[selectedToolIndex] == EditorToolBarIcon.BarType.Erazer)
+                {
+                    showNoiseSetting = true;
+                    brushColor = Color.clear;
+                }
+            }
             GUILayout.EndArea();
         }
+
         void DetailInspectCanvas()
         {
             detailInpsectCanvas = GetDetailInspectCanvasSize(InsCanvasSize.width, InsCanvasSize.height);
@@ -328,44 +341,76 @@ namespace sonil.Editors {
         //private void OnInspectorUpdate(){}
         private string _IcoPpath = "Assets/Editor/Resources";
         private List<EditorToolBarIcon> toolBarObjs;
-        private Dictionary<EditorToolBarIcon, Texture2D> toolBarPreviews;
+        private Dictionary<EditorToolBarIcon.BarType, Texture2D> toolBarPreviews;
+        private List<EditorToolBarIcon.BarType> toolBarTyes;
 
         private void OnEnable()
         {
-            if (toolBarObjs == null)
-            {
-                InitToolBarTypes();
-            }
+            ///
         }
+
         private void InitToolBarTypes()
         {
             toolBarObjs = Wei.Source.SourceHelper.GetAssetsWithScript<EditorToolBarIcon>(_IcoPpath);
-            if(toolBarPreviews == null) { toolBarPreviews = new Dictionary<EditorToolBarIcon, Texture2D>(); }
+            if(toolBarPreviews == null) { toolBarPreviews = new Dictionary<EditorToolBarIcon.BarType, Texture2D>(); }
+            if(toolBarTyes == null) { toolBarTyes = new List<EditorToolBarIcon.BarType>(); }
+            
             foreach (EditorToolBarIcon obj in toolBarObjs)
             {
-                if (!toolBarPreviews.ContainsKey(obj))
-                {
-                    Texture2D preview = AssetPreview.GetAssetPreview(obj.gameObject);
+                if (!toolBarPreviews.ContainsKey(obj.type))
+                {           
+                    //Texture2D preview = GetAssetPreviewTask(obj.gameObject);
+                    Texture2D preview = Wei.Source.SourceHelper.TextureFromEditorToolBarIcon(obj);
                     if (preview != null)
                     {
-                        toolBarPreviews.Add(obj, preview);
+                        toolBarTyes.Add(obj.type);
+                        toolBarPreviews.Add(obj.type, preview);
                     }
+                    else
+                    {
+                        Debug.LogErrorFormat("No preview for the Object {0}", obj.type.ToString());
+                    }
+                }else
+                {
+                    Debug.LogErrorFormat("There is more than one {0} over here", obj.type.ToString());
                 }
             }
         }
+
+        private Texture2D GetAssetPreviewTask(GameObject obj,int callTimes=30)
+        {
+            Texture2D preview;
+            for (int i = 0; i < callTimes; i++) {
+                preview = AssetPreview.GetAssetPreview(obj.gameObject);
+                if (preview != null) { return preview; }
+            }
+            return null;
+        }
+
         private GUIContent[] GetToolBarGUIContent()
         {
+            if (toolBarObjs == null || toolBarPreviews ==null)
+            {
+                InitToolBarTypes();
+            }
+
             int totalType = toolBarObjs.Count;
             List<GUIContent> guiContents = new List<GUIContent>();
-            for (int i = 0; i < totalType; i++)
-            {
-                GUIContent guiContent = new GUIContent();
-                guiContent.text = toolBarObjs[i].itemName;
-                guiContent.image = toolBarPreviews[toolBarObjs[i]];
-                guiContents.Add(guiContent);
+            if (totalType == toolBarPreviews.Count)
+            {   
+                for (int i = 0; i < totalType; i++)
+                {
+                    GUIContent guiContent = new GUIContent();
+                    guiContent.text = toolBarObjs[i].type.ToString();
+                    Texture2D preview = toolBarPreviews[toolBarObjs[i].type];
+                    if (preview != null) { guiContent.image = preview; }
+                    else{ Debug.LogErrorFormat("The preview of the {0} is null", toolBarObjs[i].type.ToString()); }
+                    guiContents.Add(guiContent);
+                }
             }
             return guiContents.ToArray();
         }
+
         private GUIStyle GetToolBarGUIStyle()
         {
             GUIStyle guiStyle = new GUIStyle(GUI.skin.button);
